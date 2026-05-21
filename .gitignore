@@ -1,0 +1,45 @@
+# --- node ---
+node_modules/
+.npm
+.yarn
+.pnpm-store
+*.tgz
+
+# --- next.js ---
+.next/
+out/
+build/
+dist/
+
+# --- env / secrets ---
+.env
+.env.local
+.env.*.local
+!.env.local.example
+
+# --- editors / OS ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- testing / coverage ---
+coverage/
+*.lcov
+.nyc_output/
+
+# --- typescript ---
+*.tsbuildinfo
+next-env.d.ts
+
+# --- vercel ---
+.vercel
