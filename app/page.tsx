@@ -70,35 +70,56 @@ export default function HomePage() {
     [query, patientName],
   );
 
-  const generateBoth = useCallback(() => {
-    if (!canGenerate) return;
-    // Fire both in parallel — each call is its own Vercel function
-    // invocation with its own 60s budget, so this is safe even on the
-    // Hobby plan. Each panel renders independently as its fetch resolves.
-    void generate("sa");
-    void generate("demo");
-  }, [canGenerate, generate]);
-
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:py-14">
-      <header className="mb-8">
+      {/* Hero */}
+      <header className="mb-6">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-700 ring-1 ring-cyan-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden />
+          Draft Quality Tester
+        </div>
         <h1 className="text-3xl font-semibold tracking-tight text-ink-900 sm:text-4xl">
-          Clinexio — Draft Quality Tester
+          See what the AI would write — before it reaches a patient.
         </h1>
         <p className="mt-3 max-w-2xl text-base text-ink-600">
-          Type a question a patient might send, then click <b>Generate</b>{" "}
-          under each clinic to see how the AI would respond. Use it to spot
-          tone issues, hallucinations, or rogue replies before they reach
-          real patients.
+          Type a question a patient might send, then click{" "}
+          <b>Generate this draft</b> under each clinic to compare how the AI
+          responds with your uploaded materials versus with the platform
+          defaults alone.
         </p>
       </header>
 
-      {/* Shared input form */}
+      {/* Accuracy expectation callout — set Zoya's expectations early
+          so today's edge-case misses read as "system learning",
+          not "system broken". Wording requested by TK 2026-05-22. */}
+      <div className="mb-8 flex items-start gap-3 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 shadow-sm">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="h-4 w-4"
+            aria-hidden
+          >
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+        <div className="text-sm leading-relaxed text-ink-800">
+          We currently believe the accuracy of responses to be around{" "}
+          <b>70%</b>. This will gradually grow with the feedback loop as
+          your team confirms or corrects the AI&apos;s decisions on real
+          patient traffic.
+        </div>
+      </div>
+
+      {/* Shared input — no submit button; each panel has its own
+          Generate. Form just prevents accidental page-reload on Enter. */}
       <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          generateBoth();
-        }}
+        onSubmit={(e) => e.preventDefault()}
         className="rounded-xl border border-ink-200 bg-white p-6 shadow-sm"
       >
         <label
@@ -116,53 +137,30 @@ export default function HomePage() {
           className="mt-2 w-full resize-y rounded-md border border-ink-300 bg-white px-3 py-2 text-sm text-ink-800 shadow-inner placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
         />
 
-        <div className="mt-4 flex flex-wrap items-end gap-4">
-          <div className="min-w-[200px] flex-1">
-            <label
-              htmlFor="patient"
-              className="block text-sm font-medium text-ink-800"
-            >
-              Patient&apos;s first name{" "}
-              <span className="font-normal text-ink-500">
-                (optional — used in the greeting)
-              </span>
-            </label>
-            <input
-              id="patient"
-              type="text"
-              value={patientName}
-              onChange={(e) => setPatientName(e.target.value)}
-              placeholder="Sarah"
-              className="mt-2 w-full rounded-md border border-ink-300 bg-white px-3 py-2 text-sm text-ink-800 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={!canGenerate || sa.isLoading || demo.isLoading}
-            className="rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-ink-300"
-            title="Fires both clinics in parallel. Or click each panel's button individually below."
+        <div className="mt-4">
+          <label
+            htmlFor="patient"
+            className="block text-sm font-medium text-ink-800"
           >
-            Generate both
-          </button>
+            Patient&apos;s first name{" "}
+            <span className="font-normal text-ink-500">
+              (optional — used in the greeting)
+            </span>
+          </label>
+          <input
+            id="patient"
+            type="text"
+            value={patientName}
+            onChange={(e) => setPatientName(e.target.value)}
+            placeholder="Sarah"
+            className="mt-2 w-full max-w-md rounded-md border border-ink-300 bg-white px-3 py-2 text-sm text-ink-800 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+          />
         </div>
 
-        <p className="mt-3 text-xs text-ink-500">
+        <p className="mt-4 text-xs text-ink-500">
           Please don&apos;t use real patient details — test conversations
-          are saved for debugging.
-        </p>
-
-        {/* Accuracy expectation note — set Zoya's expectations so she
-            doesn't read every miss as a system failure. Classifier
-            currently runs on platform-default few-shots only; per-clinic
-            accuracy improves as real patient traffic flows in. */}
-        <p className="mt-2 rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-800 ring-1 ring-blue-200">
-          <b>Heads up on accuracy.</b> The AI starts at ~70% classification
-          accuracy on Day 1 — it&apos;s reading platform-default rules,
-          not your clinic&apos;s real patient traffic yet. As real patient
-          enquiries flow in and your team confirms or corrects the AI&apos;s
-          decisions, the system learns from those patterns and accuracy
-          climbs significantly. Today&apos;s misses on edge cases are
-          expected; they get fixed automatically once we have your data.
+          are saved for debugging. Use the <b>Generate this draft</b>{" "}
+          button on each panel below.
         </p>
       </form>
 
