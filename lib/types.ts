@@ -29,6 +29,11 @@ export interface DraftResult {
   status: string | null;          // "pending_review" | "guardrail_failed" | ...
   body_text: string | null;
   rejected_reason: string | null;
+  // Server-rendered preview — the body_text wrapped in the same clinic
+  // template the production outbound email path uses. Contains awards,
+  // press tagline, ratings, booking CTA, [first name] substitution.
+  // Null when the renderer wasn't able to run for this draft.
+  body_html_preview?: string | null;
 }
 
 export interface ClinicDraft {
