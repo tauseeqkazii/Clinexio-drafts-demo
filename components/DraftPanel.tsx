@@ -147,7 +147,7 @@ function PanelResult({
       {/* Draft body */}
       <div className="mt-4">
         <div className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-500">
-          Draft email
+          What the AI wrote
         </div>
         {hasBody ? (
           <article className="whitespace-pre-wrap rounded-lg border border-ink-200 bg-white p-4 text-[15px] leading-relaxed text-ink-800">
@@ -161,6 +161,34 @@ function PanelResult({
           </div>
         )}
       </div>
+
+      {/* Final email preview — body wrapped in the clinic template
+          (awards / press / ratings / booking link / video link).
+          Sandboxed iframe so the email's own CSS doesn't leak into the
+          demo page styles. */}
+      {hasBody && draft?.body_html_preview && (
+        <div className="mt-5">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-xs font-medium uppercase tracking-wide text-ink-500">
+              Final email preview (what the patient would see)
+            </div>
+            <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
+              with clinic template
+            </span>
+          </div>
+          <iframe
+            title="Final email preview"
+            sandbox=""
+            srcDoc={draft.body_html_preview}
+            className="h-[520px] w-full rounded-lg border border-ink-200 bg-white shadow-inner"
+          />
+          <p className="mt-1 text-[11px] text-ink-500">
+            Includes awards, press logos, ratings, booking link and the
+            video link from the clinic profile — all injected by the
+            template after the AI finishes writing.
+          </p>
+        </div>
+      )}
 
       {/* Sources */}
       <SourcesAccordion

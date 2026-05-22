@@ -150,6 +150,20 @@ export default function HomePage() {
           Please don&apos;t use real patient details — test conversations
           are saved for debugging.
         </p>
+
+        {/* Accuracy expectation note — set Zoya's expectations so she
+            doesn't read every miss as a system failure. Classifier
+            currently runs on platform-default few-shots only; per-clinic
+            accuracy improves as real patient traffic flows in. */}
+        <p className="mt-2 rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-800 ring-1 ring-blue-200">
+          <b>Heads up on accuracy.</b> The AI starts at ~70% classification
+          accuracy on Day 1 — it&apos;s reading platform-default rules,
+          not your clinic&apos;s real patient traffic yet. As real patient
+          enquiries flow in and your team confirms or corrects the AI&apos;s
+          decisions, the system learns from those patterns and accuracy
+          climbs significantly. Today&apos;s misses on edge cases are
+          expected; they get fixed automatically once we have your data.
+        </p>
       </form>
 
       {/* Two independent panels */}
