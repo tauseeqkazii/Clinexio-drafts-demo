@@ -41,11 +41,14 @@ export interface ClinicDraft {
   error?: string | null;
 }
 
-export interface DraftPairResponse {
-  clinic_a: ClinicDraft;
-  clinic_b: ClinicDraft;
+// Single-clinic response — the page makes two of these (one per panel)
+// and renders each independently as its fetch resolves.
+export interface DraftSingleResponse {
+  clinic: ClinicDraft;
   elapsed_ms: number;
 }
+
+export type ClinicKey = "sa" | "demo";
 
 // Backend may surface API-level errors with this shape; the proxy
 // route catches them and converts to a friendly UI message via
@@ -55,7 +58,8 @@ export interface BackendErrorEnvelope {
   detail?: string;
 }
 
-export interface DraftPairRequest {
+export interface DraftSingleRequest {
   query_text: string;
   patient_first_name?: string;
+  clinic: ClinicKey;
 }

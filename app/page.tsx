@@ -1,78 +1,104 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { DraftPanel } from "@/components/DraftPanel";
-import { LoadingState } from "@/components/LoadingState";
-import type { DraftPairResponse } from "@/lib/types";
+import type { ClinicDraft, ClinicKey, DraftSingleResponse } from "@/lib/types";
 import { httpErrorLabel } from "@/lib/translate";
 
 const PLACEHOLDER_QUERY =
   "e.g. I've been losing hair on the top of my head — do you offer laser treatment for that?";
 
+interface PanelState {
+  result: ClinicDraft | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+const EMPTY_PANEL: PanelState = {
+  result: null,
+  isLoading: false,
+  error: null,
+};
+
 export default function HomePage() {
   const [query, setQuery] = useState("");
   const [patientName, setPatientName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<DraftPairResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [technicalMode, setTechnicalMode] = useState(false);
+  const [sa, setSa] = useState<PanelState>(EMPTY_PANEL);
+  const [demo, setDemo] = useState<PanelState>(EMPTY_PANEL);
 
-  const canSubmit = query.trim().length > 0 && !loading;
+  const canGenerate = query.trim().length > 0;
 
-  async function handleGenerate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!canSubmit) return;
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    try {
-      const res = await fetch("/api/draft-pair", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query_text: query.trim(),
-          patient_first_name: patientName.trim() || undefined,
-        }),
-      });
-      if (!res.ok) {
-        // The proxy route returns { error, detail? } shapes for known cases.
-        let detail: string | null = null;
-        try {
-          const body = await res.json();
-          detail = body?.detail ?? body?.error ?? null;
-        } catch {}
-        setError(detail || httpErrorLabel(res.status));
-        return;
+  const generate = useCallback(
+    async (clinic: ClinicKey) => {
+      const setPanel = clinic === "sa" ? setSa : setDemo;
+      setPanel({ result: null, isLoading: true, error: null });
+      try {
+        const res = await fetch("/api/draft-single", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query_text: query.trim(),
+            patient_first_name: patientName.trim() || undefined,
+            clinic,
+          }),
+        });
+        if (!res.ok) {
+          let detail: string | null = null;
+          try {
+            const body = await res.json();
+            detail = body?.detail ?? body?.error ?? null;
+          } catch {}
+          setPanel({
+            result: null,
+            isLoading: false,
+            error: detail || httpErrorLabel(res.status),
+          });
+          return;
+        }
+        const data: DraftSingleResponse = await res.json();
+        setPanel({ result: data.clinic, isLoading: false, error: null });
+      } catch (err) {
+        console.error(err);
+        setPanel({
+          result: null,
+          isLoading: false,
+          error:
+            "Can't reach the drafts service right now. Please try again in a few minutes.",
+        });
       }
-      const data: DraftPairResponse = await res.json();
-      setResult(data);
-    } catch (err) {
-      // Network error — backend unreachable / DNS / CORS
-      console.error(err);
-      setError(
-        "Can't reach the drafts service right now. Please try again in a few minutes."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
+    },
+    [query, patientName],
+  );
+
+  const generateBoth = useCallback(() => {
+    if (!canGenerate) return;
+    // Fire both in parallel — each call is its own Vercel function
+    // invocation with its own 60s budget, so this is safe even on the
+    // Hobby plan. Each panel renders independently as its fetch resolves.
+    void generate("sa");
+    void generate("demo");
+  }, [canGenerate, generate]);
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:py-14">
-      <header className="mb-10">
+      <header className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight text-ink-900 sm:text-4xl">
           Clinexio — Draft Quality Tester
         </h1>
         <p className="mt-3 max-w-2xl text-base text-ink-600">
-          Type a question a patient might send, and see how the AI would
-          respond for two different clinics — side by side. Use it to spot
+          Type a question a patient might send, then click <b>Generate</b>{" "}
+          under each clinic to see how the AI would respond. Use it to spot
           tone issues, hallucinations, or rogue replies before they reach
           real patients.
         </p>
       </header>
 
-      {/* Input form */}
+      {/* Shared input form */}
       <form
-        onSubmit={handleGenerate}
+        onSubmit={(e) => {
+          e.preventDefault();
+          generateBoth();
+        }}
         className="rounded-xl border border-ink-200 bg-white p-6 shadow-sm"
       >
         <label
@@ -87,18 +113,17 @@ export default function HomePage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={PLACEHOLDER_QUERY}
-          disabled={loading}
-          className="mt-2 w-full resize-y rounded-md border border-ink-300 bg-white px-3 py-2 text-sm text-ink-800 shadow-inner placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-2 w-full resize-y rounded-md border border-ink-300 bg-white px-3 py-2 text-sm text-ink-800 shadow-inner placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
         />
 
         <div className="mt-4 flex flex-wrap items-end gap-4">
-          <div className="flex-1 min-w-[200px]">
+          <div className="min-w-[200px] flex-1">
             <label
               htmlFor="patient"
               className="block text-sm font-medium text-ink-800"
             >
               Patient&apos;s first name{" "}
-              <span className="text-ink-500 font-normal">
+              <span className="font-normal text-ink-500">
                 (optional — used in the greeting)
               </span>
             </label>
@@ -108,16 +133,16 @@ export default function HomePage() {
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
               placeholder="Sarah"
-              disabled={loading}
-              className="mt-2 w-full rounded-md border border-ink-300 bg-white px-3 py-2 text-sm text-ink-800 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-2 w-full rounded-md border border-ink-300 bg-white px-3 py-2 text-sm text-ink-800 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
             />
           </div>
           <button
             type="submit"
-            disabled={!canSubmit}
+            disabled={!canGenerate || sa.isLoading || demo.isLoading}
             className="rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-ink-300"
+            title="Fires both clinics in parallel. Or click each panel's button individually below."
           >
-            {loading ? "Generating..." : "Generate both drafts"}
+            Generate both
           </button>
         </div>
 
@@ -127,47 +152,39 @@ export default function HomePage() {
         </p>
       </form>
 
-      {/* Error banner */}
-      {error && !loading && (
-        <div
-          role="alert"
-          className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800"
-        >
-          {error}
-        </div>
-      )}
-
-      {/* Results / loading */}
-      {loading ? (
-        <LoadingState />
-      ) : (
-        <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <DraftPanel
-            title="Secret Aesthetics"
-            subtitle="Your clinic, with all the materials you've uploaded."
-            accent="primary"
-            result={result?.clinic_a ?? null}
-            technicalMode={technicalMode}
-            errorMessage={result?.clinic_a?.error ?? null}
-          />
-          <DraftPanel
-            title="A brand-new clinic"
-            subtitle="No clinic content uploaded — only the global aesthetics matrix."
-            accent="neutral"
-            result={result?.clinic_b ?? null}
-            technicalMode={technicalMode}
-            errorMessage={result?.clinic_b?.error ?? null}
-          />
-        </div>
-      )}
+      {/* Two independent panels */}
+      <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <DraftPanel
+          title="Secret Aesthetics"
+          subtitle="Your clinic, with all the materials you've uploaded."
+          accent="primary"
+          result={sa.result}
+          isLoading={sa.isLoading}
+          errorMessage={sa.error}
+          technicalMode={technicalMode}
+          canGenerate={canGenerate}
+          onGenerate={() => generate("sa")}
+        />
+        <DraftPanel
+          title="A brand-new clinic"
+          subtitle="No clinic content uploaded — only the global aesthetics matrix."
+          accent="neutral"
+          result={demo.result}
+          isLoading={demo.isLoading}
+          errorMessage={demo.error}
+          technicalMode={technicalMode}
+          canGenerate={canGenerate}
+          onGenerate={() => generate("demo")}
+        />
+      </div>
 
       {/* Footer */}
-      <footer className="mt-12 flex items-center justify-between text-xs text-ink-500">
+      <footer className="mt-12 flex flex-wrap items-center justify-between gap-3 text-xs text-ink-500">
         <span>
           Both drafts use the same AI pipeline real patients will see —
           same models, same retrieval, same safety rules.
         </span>
-        <label className="flex cursor-pointer items-center gap-2 select-none">
+        <label className="flex cursor-pointer select-none items-center gap-2">
           <input
             type="checkbox"
             checked={technicalMode}
