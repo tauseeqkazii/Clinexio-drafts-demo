@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
 import type { ClinicDraft } from "@/lib/types";
 import {
   COLOUR_DOT,
@@ -165,29 +166,11 @@ function PanelResult({
       {/* Final email preview — body wrapped in the clinic template
           (awards / press / ratings / booking link / video link).
           Sandboxed iframe so the email's own CSS doesn't leak into the
-          demo page styles. */}
+          demo page. allow-same-origin lets the parent read the
+          iframe's body scrollHeight to auto-size; scripts still
+          blocked since allow-scripts is NOT set. */}
       {hasBody && draft?.body_html_preview && (
-        <div className="mt-5">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-xs font-medium uppercase tracking-wide text-ink-500">
-              Final email preview (what the patient would see)
-            </div>
-            <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
-              with clinic template
-            </span>
-          </div>
-          <iframe
-            title="Final email preview"
-            sandbox=""
-            srcDoc={draft.body_html_preview}
-            className="h-[520px] w-full rounded-lg border border-ink-200 bg-white shadow-inner"
-          />
-          <p className="mt-1 text-[11px] text-ink-500">
-            Includes awards, press logos, ratings, booking link and the
-            video link from the clinic profile — all injected by the
-            template after the AI finishes writing.
-          </p>
-        </div>
+        <EmailPreview html={draft.body_html_preview} />
       )}
 
       {/* Sources */}
@@ -208,5 +191,102 @@ function PanelResult({
         </details>
       )}
     </>
+  );
+}
+
+/**
+ * Email preview iframe that auto-sizes to its content height.
+ *
+ * The clinic email template ships its own CSS (font sizes, padding,
+ * <table> layout for Gmail compatibility). An iframe gives perfect
+ * style isolation from the demo page's Tailwind. The sandbox is
+ * "allow-same-origin" — that lets the parent JS read the iframe's
+ * body scrollHeight to size it correctly, while scripts inside the
+ * iframe are still blocked (allow-scripts is NOT set).
+ *
+ * Why scale-to-fit: the email template is fixed at width=600px (Gmail
+ * convention). On a narrow demo panel (~480-560px wide on a typical
+ * laptop) the email overflows horizontally. We measure the panel
+ * width on mount and apply a CSS transform: scale(W/600) so the email
+ * shrinks to fit. Looks crisp because CSS scale is vector, not raster.
+ */
+function EmailPreview({ html }: { html: string }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [bodyHeight, setBodyHeight] = useState(720);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const measure = () => {
+      const wrap = wrapRef.current;
+      if (!wrap) return;
+      const wrapW = wrap.clientWidth;
+      // Template baseline width is 600px; scale down if the panel is
+      // narrower, never scale up past 1x.
+      const s = Math.min(1, wrapW / 600);
+      setScale(s);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  const onLoad = () => {
+    try {
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc) return;
+      // scrollHeight reflects the real rendered content height.
+      // Add a small bottom margin so the email's last row isn't
+      // flush against the iframe edge.
+      const h = doc.body?.scrollHeight ?? doc.documentElement.scrollHeight;
+      if (h && h > 0) setBodyHeight(h + 16);
+    } catch {
+      // cross-origin (shouldn't happen with allow-same-origin) —
+      // fall back to the default 720px which fits most emails.
+    }
+  };
+
+  // Apply the scale to BOTH the iframe (so the rendered email shrinks)
+  // and the wrapper height (so the scaled iframe doesn't leave a tall
+  // empty space below). Visual height = bodyHeight * scale.
+  const visualHeight = Math.round(bodyHeight * scale);
+
+  return (
+    <div className="mt-5">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-xs font-medium uppercase tracking-wide text-ink-500">
+          Final email preview (what the patient would see)
+        </div>
+        <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
+          with clinic template
+        </span>
+      </div>
+      <div
+        ref={wrapRef}
+        className="overflow-hidden rounded-lg border border-ink-200 bg-[#F5F3EF] shadow-inner"
+        style={{ height: `${visualHeight}px` }}
+      >
+        <iframe
+          ref={iframeRef}
+          title="Final email preview"
+          sandbox="allow-same-origin"
+          srcDoc={html}
+          onLoad={onLoad}
+          style={{
+            width: "600px",
+            height: `${bodyHeight}px`,
+            border: "0",
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            display: "block",
+          }}
+        />
+      </div>
+      <p className="mt-1 text-[11px] text-ink-500">
+        Includes awards, press logos, ratings, booking link and the
+        video link from the clinic profile — all injected by the
+        template after the AI finishes writing.
+      </p>
+    </div>
   );
 }
