@@ -158,9 +158,11 @@ export default function HomePage() {
         </div>
 
         <p className="mt-4 text-xs text-ink-500">
-          Please don&apos;t use real patient details — test conversations
-          are saved for debugging. Use the <b>Generate this draft</b>{" "}
-          button on each panel below.
+          Each query is treated as a fresh first message. In production the AI
+          also reads the patient&apos;s prior conversation history — so
+          slow-burn patterns (multiple mild messages adding up over time) are
+          caught there, not in this single-query tester. Use the{" "}
+          <b>Generate this draft</b> button on each panel below.
         </p>
       </form>
 
