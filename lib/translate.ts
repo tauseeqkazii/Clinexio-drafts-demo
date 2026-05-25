@@ -53,6 +53,52 @@ export function colourLabel(c: ColourCode): string {
 }
 
 // ---------------------------------------------------------------------
+// Template hint (sub-template) → plain label
+// ---------------------------------------------------------------------
+// The classifier picks one of ~23 sub-templates per the AI tone doc
+// (red sub-types, amber refund/dissatisfaction/post-tx-concern,
+// yellow pathways A/B/C, blue pre-treatment / complex medical, green
+// aftercare/top-up/info/booking, plus grey + purple). The doctor
+// shouldn't see the enum string — show a plain label.
+export const TEMPLATE_HINT_LABEL: Record<string, string> = {
+  // Red sub-templates
+  red_medical_emergency: "Urgent clinical emergency",
+  red_legal_threat: "Legal threat / regulator",
+  red_mental_health_crisis: "Mental health crisis",
+  red_pregnancy_safety: "Pregnancy safety",
+  red_minor_patient: "Minor patient",
+  // Amber sub-templates
+  amber_complaint_concern: "Generic complaint",
+  amber_dissatisfaction: "Dissatisfaction with outcome",
+  amber_refund_only: "Refund request",
+  amber_post_treatment_concern: "Post-treatment concern (clinician review)",
+  // Green sub-templates
+  green_aftercare: "Aftercare advice",
+  green_post_treatment_info: "Post-treatment info (product / units)",
+  green_post_treatment_booking: "Post-treatment booking",
+  green_top_up_request: "Top-up request",
+  // Blue sub-templates
+  blue_pre_treatment_safety: "Pre-treatment safety (covered by KB)",
+  blue_pre_treatment_admin: "Pre-treatment admin / booking",
+  blue_complex_medical_history_awaiting_clinical:
+    "Complex medical history — awaiting clinician",
+  // Yellow lead pathways
+  yellow_new_enquiry: "New enquiry",
+  yellow_pathway_a_unsure: "Pathway A — unsure / multiple concerns",
+  yellow_pathway_b_not_offered: "Pathway B — specific treatment not offered",
+  yellow_pathway_c_returning_known: "Pathway C — knows what they want",
+  // Grey + purple
+  grey_spam: "Spam",
+  grey_off_topic: "Off-topic",
+  purple_notification: "External notification",
+};
+
+export function templateHintLabel(hint: string | null | undefined): string | null {
+  if (!hint) return null;
+  return TEMPLATE_HINT_LABEL[hint] ?? hint;
+}
+
+// ---------------------------------------------------------------------
 // Source tier (clinic / platform) → plain label
 // ---------------------------------------------------------------------
 export function tierLabel(tier: string | null | undefined): string {
