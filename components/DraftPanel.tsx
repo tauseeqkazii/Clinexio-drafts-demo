@@ -5,6 +5,7 @@ import {
   COLOUR_DOT,
   colourLabel,
   statusLabel,
+  templateHintLabel,
   type ColourCode,
 } from "@/lib/translate";
 import { SourcesAccordion } from "./SourcesAccordion";
@@ -113,11 +114,16 @@ function PanelResult({
   const draft = result.draft;
   const status = statusLabel(draft?.status);
   const hasBody = !!draft?.body_text && draft.body_text.trim().length > 0;
+  // 2026-05-28 — sub-template label. The classifier emits one of ~23
+  // closed-enum values that pinpoints the specific tone-doc template
+  // ("Refund request" vs generic "Complaint", etc.). Hidden when the
+  // backend doesn't return a hint (older API or classifier failure).
+  const hintLabel = templateHintLabel(cls?.template_hint);
 
   return (
     <>
-      {/* Category + status row */}
-      <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+      {/* Category + sub-template + status row */}
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
         {colour && (
           <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-ink-700 ring-1 ring-ink-200">
             <span
@@ -125,6 +131,14 @@ function PanelResult({
               aria-hidden
             />
             {colourLabel(colour)}
+          </span>
+        )}
+        {hintLabel && (
+          <span
+            className="inline-flex items-center rounded-full bg-ink-50 px-3 py-1 text-xs font-medium text-ink-700 ring-1 ring-ink-200"
+            title="Sub-template the AI selected for this draft, per the AI tone doc"
+          >
+            {hintLabel}
           </span>
         )}
         <span

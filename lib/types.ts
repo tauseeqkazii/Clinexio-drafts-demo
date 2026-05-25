@@ -23,6 +23,14 @@ export interface ClassificationSummary {
   category_detail: string | null;
   requires_clinical_review: boolean | null;
   reviewer_note: string | null;
+  /**
+   * 2026-05-28 — sub-template selection from the classifier. One of
+   * the ~23 closed-enum values (red_medical_emergency,
+   * amber_refund_only, yellow_pathway_a_unsure, etc.). The UI maps
+   * this to a friendly label via lib/translate.ts:templateHintLabel.
+   * Nullable — older classifier outputs / failures return null.
+   */
+  template_hint: string | null;
 }
 
 export interface DraftResult {
