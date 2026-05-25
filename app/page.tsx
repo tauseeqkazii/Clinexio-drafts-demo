@@ -110,7 +110,7 @@ export default function HomePage() {
         </div>
         <div className="text-sm leading-relaxed text-ink-800">
           We currently believe the accuracy of responses to be around{" "}
-          <b>70%</b>. This will gradually grow with the feedback loop as
+          <b>60%</b>. This will gradually grow with the feedback loop as
           your team confirms or corrects the AI&apos;s decisions on real
           patient traffic.
         </div>
